@@ -1,7 +1,12 @@
 import http from './http'
 
-export function fetchStudents() {
-    return http.get('/students')
+export function fetchStudents(pageNumber, pageSize) {
+    const params = {};
+    if (pageNumber !== undefined && pageSize !== undefined) {
+        params.pageNumber = pageNumber;
+        params.pageSize = pageSize;
+    }
+    return http.get('/students', { params });
 }
 
 export function getStudent(id) {
@@ -26,4 +31,13 @@ export function enrollStudentToCourse(studentId, courseId) {
 
 export function removeStudentFromCourse(studentId, courseId) {
     return http.delete(`/students/${studentId}/courses/${courseId}`)
+}
+
+export function getStudentCourses(id, pageNumber, pageSize) {
+    const params = {};
+    if (pageNumber !== undefined && pageSize !== undefined) {
+        params.pageNumber = pageNumber;
+        params.pageSize = pageSize;
+    }
+    return http.get(`/students/${id}/courses`, { params });
 }

@@ -1,7 +1,12 @@
 import http from './http'
 
-export function fetchTeachers() {
-    return http.get('/teachers')
+export function fetchTeachers(pageNumber, pageSize) {
+    const params = {};
+    if (pageNumber !== undefined && pageSize !== undefined) {
+        params.pageNumber = pageNumber;
+        params.pageSize = pageSize;
+    }
+    return http.get('/teachers', { params });
 }
 
 export function getTeacher(id) {

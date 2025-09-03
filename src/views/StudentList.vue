@@ -17,13 +17,22 @@
     
     <div v-else class="table-container">
       <StudentTable
-        :students="filteredStudents"
-        :filters="filters"
+        :students="students"
         :loading="loading"
         @edit="openEditModal"
         @delete="handleDelete"
-        @filter-change="handleFilterChange"
-        @clear-filters="clearFilters"
+        @view-courses="viewCourses"
+        @search="handleSearch"
+      />
+      
+      <Pagination
+        :current-page="pagination.currentPage"
+        :total-pages="pagination.totalPages"
+        :total-count="pagination.totalCount"
+        :page-size="pagination.pageSize"
+        :loading="loading"
+        @page-change="handlePageChange"
+        @page-size-change="handlePageSizeChange"
       />
     </div>
 
@@ -39,54 +48,75 @@
       @success="handleFormSuccess" 
       @close="handleFormClose" 
     />
+
+    <StudentCoursesModal
+      :visible="showCoursesModal"
+      :courses="courses"
+      :loading="coursesLoading"
+      :error="coursesError"
+      :current-page="coursesPagination.currentPage"
+      :total-pages="coursesPagination.totalPages"
+      :total-count="coursesPagination.totalCount"
+      :page-size="coursesPagination.pageSize"
+      @close="closeCoursesModal"
+      @page-change="handleCoursesPageChange"
+      @page-size-change="handleCoursesPageSizeChange"
+    />
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, nextTick, computed } from 'vue';
-import { fetchStudents, deleteStudent } from '@/api/students';
+import { ref, onMounted, nextTick } from 'vue';
+import { fetchStudents, deleteStudent, getStudentCourses } from '@/api/students';
 import StudentForm from './StudentForm.vue';
 import StudentTable from '@/components/StudentTable.vue';
+import StudentCoursesModal from '@/components/StudentCoursesModal.vue';
+import Pagination from '@/components/Pagination.vue';
 import { useConfirm } from '@/composables/useConfirm';
 import { useErrorHandler } from '@/composables/useErrorHandler';
 
 const students = ref([]);
+const courses = ref([]);
 const error = ref('');
+const coursesError = ref('');
 const loading = ref(false);
+const coursesLoading = ref(false);
+const showCoursesModal = ref(false);
+const currentStudentId = ref(null);
+
+const coursesPagination = ref({
+  currentPage: 0,
+  totalPages: 0,
+  totalCount: 0,
+  pageSize: 10
+});
 const formMode = ref('create');
 const selectedStudent = ref(null);
 const studentFormRef = ref(null);
 
-const filters = ref({
-  studentId: '',
-  firstName: '',
-  lastName: '',
-  email: '',
-  birthday: ''
+const pagination = ref({
+  currentPage: 0,
+  totalPages: 0,
+  totalCount: 0,
+  pageSize: 20
 });
+
+const searchQuery = ref('');
 
 const { confirm } = useConfirm();
 const { handleError } = useErrorHandler();
-
-const filteredStudents = computed(() => {
-  return students.value.filter(student => {
-    return (
-      student.studentId.toString().toLowerCase().includes(filters.value.studentId.toLowerCase()) &&
-      student.firstName.toLowerCase().includes(filters.value.firstName.toLowerCase()) &&
-      student.lastName.toLowerCase().includes(filters.value.lastName.toLowerCase()) &&
-      student.email.toLowerCase().includes(filters.value.email.toLowerCase()) &&
-      student.birthday.includes(filters.value.birthday)
-    );
-  });
-});
 
 async function loadStudents() {
   error.value = '';
   loading.value = true;
   
   try {
-    const { data } = await fetchStudents();
-    students.value = data;
+    const response = await fetchStudents(pagination.value.currentPage, pagination.value.pageSize);
+    students.value = response.data;
+    
+    // Extract pagination info from headers
+    pagination.value.totalPages = parseInt(response.headers['x-total-pages']) || 0;
+    pagination.value.totalCount = parseInt(response.headers['x-total-count']) || 0;
   } catch (e) {
     error.value = handleError(e, '載入學生資料失敗');
   } finally {
@@ -144,18 +174,70 @@ function handleFormClose() {
   selectedStudent.value = null;
 }
 
-function handleFilterChange(newFilters) {
-  filters.value = { ...filters.value, ...newFilters };
+function handleSearch(query) {
+  searchQuery.value = query;
+  pagination.value.currentPage = 0; // Reset to first page when searching
+  loadStudents();
 }
 
-function clearFilters() {
-  filters.value = {
-    studentId: '',
-    firstName: '',
-    lastName: '',
-    email: '',
-    birthday: ''
-  };
+function handlePageChange(page) {
+  pagination.value.currentPage = page;
+  loadStudents();
+}
+
+function handlePageSizeChange(pageSize) {
+  pagination.value.pageSize = pageSize;
+  pagination.value.currentPage = 0; // Reset to first page when changing page size
+  loadStudents();
+}
+
+async function viewCourses(studentId) {
+  currentStudentId.value = studentId;
+  coursesError.value = '';
+  coursesPagination.value.currentPage = 0; // Reset to first page
+  showCoursesModal.value = true;
+  await loadCourses();
+}
+
+async function loadCourses() {
+  if (!currentStudentId.value) return;
+  
+  coursesLoading.value = true;
+  
+  try {
+    const response = await getStudentCourses(
+      currentStudentId.value,
+      coursesPagination.value.currentPage,
+      coursesPagination.value.pageSize
+    );
+    courses.value = response.data;
+    
+    // Extract pagination info from headers
+    coursesPagination.value.totalPages = parseInt(response.headers['x-total-pages']) || 0;
+    coursesPagination.value.totalCount = parseInt(response.headers['x-total-count']) || 0;
+  } catch (e) {
+    coursesError.value = handleError(e, '載入學生選課資料失敗');
+  } finally {
+    coursesLoading.value = false;
+  }
+}
+
+function closeCoursesModal() {
+  showCoursesModal.value = false;
+  courses.value = [];
+  coursesError.value = '';
+  currentStudentId.value = null;
+}
+
+function handleCoursesPageChange(page) {
+  coursesPagination.value.currentPage = page;
+  loadCourses();
+}
+
+function handleCoursesPageSizeChange(pageSize) {
+  coursesPagination.value.pageSize = pageSize;
+  coursesPagination.value.currentPage = 0; // Reset to first page when changing page size
+  loadCourses();
 }
 
 onMounted(() => {

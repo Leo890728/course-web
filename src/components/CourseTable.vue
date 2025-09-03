@@ -9,51 +9,31 @@
         <th>授課教師</th>
         <th>操作</th>
       </tr>
-      <tr class="filter-row">
-        <th>
-          <input 
-            :value="filters.courseId" 
-            @input="handleFilterInput('courseId', $event)" 
-            placeholder="篩選課程編號" 
-            class="filter-input" 
-          />
-        </th>
-        <th>
-          <input 
-            :value="filters.name" 
-            @input="handleFilterInput('name', $event)" 
-            placeholder="篩選課程名稱" 
-            class="filter-input" 
-          />
-        </th>
-        <th>
-          <input 
-            :value="filters.description" 
-            @input="handleFilterInput('description', $event)" 
-            placeholder="篩選描述" 
-            class="filter-input" 
-          />
-        </th>
-        <th>
-          <input 
-            :value="filters.credits" 
-            @input="handleFilterInput('credits', $event)" 
-            placeholder="篩選學分" 
-            class="filter-input" 
-          />
-        </th>
-        <th>
-          <input 
-            :value="filters.teacher" 
-            @input="handleFilterInput('teacher', $event)" 
-            placeholder="篩選教師" 
-            class="filter-input" 
-          />
-        </th>
-        <th>
-          <button @click="$emit('clear-filters')" class="clear-filters-btn">
-            清除
-          </button>
+      <tr class="search-row">
+        <th colspan="6">
+          <div class="search-container">
+            <input 
+              :value="searchQuery" 
+              @input="handleSearchInput"
+              @keyup.enter="$emit('search', searchQuery)"
+              placeholder="搜尋課程（課程編號、名稱、描述、教師）" 
+              class="search-input" 
+            />
+            <button 
+              @click="$emit('search', searchQuery)" 
+              class="search-btn"
+              :disabled="loading"
+            >
+              搜尋
+            </button>
+            <button 
+              @click="handleClearSearch" 
+              class="clear-search-btn"
+              :disabled="loading"
+            >
+              清除
+            </button>
+          </div>
         </th>
       </tr>
     </thead>
@@ -67,20 +47,20 @@
         <td class="actions-cell">
           <div class="action-buttons">
             <button 
+              class="btn btn-sm btn-info" 
+              @click="$emit('view-students', course.courseId)" 
+              :disabled="loading"
+              title="查看選課學生"
+            >
+              查看學生
+            </button>
+            <button 
               class="btn btn-sm btn-outline" 
               @click="$emit('edit', course)" 
               :disabled="loading"
               title="編輯課程"
             >
               編輯
-            </button>
-            <button 
-              class="btn btn-sm btn-outline" 
-              @click="$emit('view-students', course.courseId)" 
-              :disabled="loading"
-              title="查看選課學生"
-            >
-              學生
             </button>
             <button 
               class="btn btn-sm btn-danger" 
@@ -95,7 +75,7 @@
       </tr>
       <tr v-if="courses.length === 0 && !loading">
         <td colspan="6" class="no-data">
-          沒有符合篩選條件的課程
+          沒有找到課程資料
         </td>
       </tr>
       <tr v-if="loading">
@@ -111,16 +91,12 @@
 </template>
 
 <script setup>
-import { defineEmits } from 'vue';
+import { ref, defineEmits } from 'vue';
 
 defineProps({
   courses: {
     type: Array,
     default: () => []
-  },
-  filters: {
-    type: Object,
-    default: () => ({})
   },
   loading: {
     type: Boolean,
@@ -128,10 +104,17 @@ defineProps({
   }
 });
 
-const emit = defineEmits(['edit', 'delete', 'view-students', 'filter-change', 'clear-filters']);
+const emit = defineEmits(['edit', 'delete', 'view-students', 'search']);
 
-function handleFilterInput(field, event) {
-  emit('filter-change', { [field]: event.target.value });
+const searchQuery = ref('');
+
+function handleSearchInput(event) {
+  searchQuery.value = event.target.value;
+}
+
+function handleClearSearch() {
+  searchQuery.value = '';
+  emit('search', '');
 }
 </script>
 
@@ -157,29 +140,55 @@ function handleFilterInput(field, event) {
   border-top: 1px solid #dee2e6;
 }
 
-.filter-row th {
-  padding: 8px;
+.search-row th {
+  padding: 12px;
   background: #f1f3f4;
 }
 
-.filter-input {
-  width: 100%;
-  padding: 6px 8px;
+.search-container {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.search-input {
+  flex: 1;
+  padding: 8px 12px;
   border: 1px solid #ced4da;
   border-radius: 4px;
-  font-size: 13px;
+  font-size: 14px;
   transition: border-color 0.2s ease;
 }
 
-.filter-input:focus {
+.search-input:focus {
   outline: none;
   border-color: #007bff;
   box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
 }
 
-.clear-filters-btn {
-  padding: 6px 12px;
-  font-size: 13px;
+.search-btn {
+  padding: 8px 16px;
+  font-size: 14px;
+  background: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.search-btn:hover:not(:disabled) {
+  background: #0056b3;
+}
+
+.search-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.clear-search-btn {
+  padding: 8px 16px;
+  font-size: 14px;
   background: #6c757d;
   color: white;
   border: none;
@@ -188,8 +197,13 @@ function handleFilterInput(field, event) {
   transition: background-color 0.2s ease;
 }
 
-.clear-filters-btn:hover {
+.clear-search-btn:hover:not(:disabled) {
   background: #5a6268;
+}
+
+.clear-search-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .description-cell {
@@ -239,6 +253,17 @@ function handleFilterInput(field, event) {
 .btn-danger:hover:not(:disabled) {
   background: #c82333;
   border-color: #bd2130;
+}
+
+.btn-info {
+  background: #17a2b8;
+  border: 1px solid #17a2b8;
+  color: white;
+}
+
+.btn-info:hover:not(:disabled) {
+  background: #138496;
+  border-color: #117a8b;
 }
 
 .no-data {

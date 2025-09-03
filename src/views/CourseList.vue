@@ -17,14 +17,22 @@
     
     <div v-else class="table-container">
       <CourseTable
-        :courses="filteredCourses"
-        :filters="filters"
+        :courses="courses"
         :loading="loading"
         @edit="openEditModal"
         @delete="handleDelete"
         @view-students="viewStudents"
-        @filter-change="handleFilterChange"
-        @clear-filters="clearFilters"
+        @search="handleSearch"
+      />
+      
+      <Pagination
+        :current-page="pagination.currentPage"
+        :total-pages="pagination.totalPages"
+        :total-count="pagination.totalCount"
+        :page-size="pagination.pageSize"
+        :loading="loading"
+        @page-change="handlePageChange"
+        @page-size-change="handlePageSizeChange"
       />
     </div>
 
@@ -46,17 +54,24 @@
       :students="students"
       :loading="studentsLoading"
       :error="studentsError"
+      :current-page="studentsPagination.currentPage"
+      :total-pages="studentsPagination.totalPages"
+      :total-count="studentsPagination.totalCount"
+      :page-size="studentsPagination.pageSize"
       @close="closeStudentsModal"
+      @page-change="handleStudentsPageChange"
+      @page-size-change="handleStudentsPageSizeChange"
     />
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, nextTick, computed } from 'vue';
+import { ref, onMounted, nextTick } from 'vue';
 import { fetchCourses, deleteCourse, getCourseStudents } from '@/api/courses';
 import CourseForm from './CourseForm.vue';
 import CourseTable from '@/components/CourseTable.vue';
 import StudentsModal from '@/components/StudentsModal.vue';
+import Pagination from '@/components/Pagination.vue';
 import { useConfirm } from '@/composables/useConfirm';
 import { useErrorHandler } from '@/composables/useErrorHandler';
 
@@ -67,41 +82,41 @@ const studentsError = ref('');
 const loading = ref(false);
 const studentsLoading = ref(false);
 const showStudentsModal = ref(false);
+const currentCourseId = ref(null);
+
+const studentsPagination = ref({
+  currentPage: 0,
+  totalPages: 0,
+  totalCount: 0,
+  pageSize: 10
+});
 const formMode = ref('create');
 const selectedCourse = ref(null);
 const courseFormRef = ref(null);
 
-const filters = ref({
-  courseId: '',
-  name: '',
-  description: '',
-  credits: '',
-  teacher: ''
+const pagination = ref({
+  currentPage: 0,
+  totalPages: 0,
+  totalCount: 0,
+  pageSize: 20
 });
+
+const searchQuery = ref('');
 
 const { confirm } = useConfirm();
 const { handleError } = useErrorHandler();
-
-const filteredCourses = computed(() => {
-  return courses.value.filter(course => {
-    const teacherName = course.teacher?.name || '未指定';
-    return (
-      course.courseId.toString().toLowerCase().includes(filters.value.courseId.toLowerCase()) &&
-      course.name.toLowerCase().includes(filters.value.name.toLowerCase()) &&
-      course.description.toLowerCase().includes(filters.value.description.toLowerCase()) &&
-      course.credits.toString().includes(filters.value.credits) &&
-      teacherName.toLowerCase().includes(filters.value.teacher.toLowerCase())
-    );
-  });
-});
 
 async function loadCourses() {
   error.value = '';
   loading.value = true;
   
   try {
-    const { data } = await fetchCourses();
-    courses.value = data;
+    const response = await fetchCourses(pagination.value.currentPage, pagination.value.pageSize);
+    courses.value = response.data;
+    
+    // Extract pagination info from headers
+    pagination.value.totalPages = parseInt(response.headers['x-total-pages']) || 0;
+    pagination.value.totalCount = parseInt(response.headers['x-total-count']) || 0;
   } catch (e) {
     error.value = handleError(e, '載入課程資料失敗');
   } finally {
@@ -154,13 +169,29 @@ function handleFormClose() {
 }
 
 async function viewStudents(courseId) {
+  currentCourseId.value = courseId;
   studentsError.value = '';
-  studentsLoading.value = true;
+  studentsPagination.value.currentPage = 0; // Reset to first page
   showStudentsModal.value = true;
+  await loadStudents();
+}
+
+async function loadStudents() {
+  if (!currentCourseId.value) return;
+  
+  studentsLoading.value = true;
   
   try {
-    const { data } = await getCourseStudents(courseId);
-    students.value = data;
+    const response = await getCourseStudents(
+      currentCourseId.value,
+      studentsPagination.value.currentPage,
+      studentsPagination.value.pageSize
+    );
+    students.value = response.data;
+    
+    // Extract pagination info from headers
+    studentsPagination.value.totalPages = parseInt(response.headers['x-total-pages']) || 0;
+    studentsPagination.value.totalCount = parseInt(response.headers['x-total-count']) || 0;
   } catch (e) {
     studentsError.value = handleError(e, '載入選課學生資料失敗');
   } finally {
@@ -172,20 +203,35 @@ function closeStudentsModal() {
   showStudentsModal.value = false;
   students.value = [];
   studentsError.value = '';
+  currentCourseId.value = null;
 }
 
-function handleFilterChange(newFilters) {
-  filters.value = { ...filters.value, ...newFilters };
+function handleStudentsPageChange(page) {
+  studentsPagination.value.currentPage = page;
+  loadStudents();
 }
 
-function clearFilters() {
-  filters.value = {
-    courseId: '',
-    name: '',
-    description: '',
-    credits: '',
-    teacher: ''
-  };
+function handleStudentsPageSizeChange(pageSize) {
+  studentsPagination.value.pageSize = pageSize;
+  studentsPagination.value.currentPage = 0; // Reset to first page when changing page size
+  loadStudents();
+}
+
+function handleSearch(query) {
+  searchQuery.value = query;
+  pagination.value.currentPage = 0; // Reset to first page when searching
+  loadCourses();
+}
+
+function handlePageChange(page) {
+  pagination.value.currentPage = page;
+  loadCourses();
+}
+
+function handlePageSizeChange(pageSize) {
+  pagination.value.pageSize = pageSize;
+  pagination.value.currentPage = 0; // Reset to first page when changing page size
+  loadCourses();
 }
 
 onMounted(() => {

@@ -7,7 +7,7 @@
     >
       <div class="modal" @click.stop>
         <div class="modal-header">
-          <h2 class="modal-title">選課學生列表</h2>
+          <h2 class="modal-title">學生選課列表</h2>
           <button class="btn-close" @click="$emit('close')" aria-label="關閉">
             <span>&times;</span>
           </button>
@@ -24,31 +24,31 @@
             <span>{{ error }}</span>
           </div>
           
-          <div v-else-if="students.length > 0" class="students-content">
-            <div class="students-summary">
-              共 {{ totalCount || students.length }} 位學生選修此課程
+          <div v-else-if="courses.length > 0" class="courses-content">
+            <div class="courses-summary">
+              共 {{ totalCount || courses.length }} 門課程已選修
             </div>
             
             <div class="table-wrapper">
-              <table class="students-table">
+              <table class="courses-table">
                 <thead>
                   <tr>
-                    <th>學號</th>
-                    <th>姓名</th>
-                    <th>電子郵件</th>
+                    <th>課程編號</th>
+                    <th>課程名稱</th>
+                    <th>課程描述</th>
+                    <th>學分</th>
+                    <th>授課教師</th>
                     <th>選課時間</th>
                   </tr>
                 </thead>
                 <tbody>
-                  <tr v-for="student in students" :key="student.studentId">
-                    <td class="student-id">{{ student.studentId }}</td>
-                    <td class="student-name">{{ student.firstName }} {{ student.lastName }}</td>
-                    <td class="student-email">
-                      <a :href="`mailto:${student.email}`" class="email-link">
-                        {{ student.email }}
-                      </a>
-                    </td>
-                    <td class="enrollment-date">{{ formatDate(student.enrollmentDate) }}</td>
+                  <tr v-for="course in courses" :key="course.courseId">
+                    <td class="course-id">{{ course.courseId }}</td>
+                    <td class="course-name">{{ course.name }}</td>
+                    <td class="course-description">{{ course.description }}</td>
+                    <td class="course-credits">{{ course.credits }}</td>
+                    <td class="course-teacher">{{ course.teacher?.name || '未指定' }}</td>
+                    <td class="enrollment-date">{{ formatDate(course.enrollmentDate) }}</td>
                   </tr>
                 </tbody>
               </table>
@@ -69,7 +69,7 @@
           
           <div v-else class="empty-state">
             <div class="empty-icon">📚</div>
-            <p>此課程目前沒有學生選修</p>
+            <p>此學生目前沒有選修任何課程</p>
           </div>
         </div>
         
@@ -92,7 +92,7 @@ defineProps({
     type: Boolean,
     default: false
   },
-  students: {
+  courses: {
     type: Array,
     default: () => []
   },
@@ -156,7 +156,7 @@ function formatDate(dateString) {
   top: 50px;
   border-radius: 12px;
   width: 90vw;
-  max-width: 800px;
+  max-width: 1200px;
   max-height: 90vh;
   display: flex;
   flex-direction: column;
@@ -260,13 +260,13 @@ function formatDate(dateString) {
   font-size: 1.2em;
 }
 
-.students-content {
+.courses-content {
   display: flex;
   flex-direction: column;
   gap: 16px;
 }
 
-.students-summary {
+.courses-summary {
   padding: 12px 16px;
   background: #e7f3ff;
   border: 1px solid #b8daff;
@@ -281,19 +281,19 @@ function formatDate(dateString) {
   border: 1px solid #dee2e6;
 }
 
-.students-table {
+.courses-table {
   width: 100%;
   border-collapse: collapse;
 }
 
-.students-table th,
-.students-table td {
+.courses-table th,
+.courses-table td {
   padding: 12px;
   text-align: left;
   border-bottom: 1px solid #dee2e6;
 }
 
-.students-table th {
+.courses-table th {
   background: #f8f9fa;
   font-weight: 600;
   color: #495057;
@@ -301,34 +301,41 @@ function formatDate(dateString) {
   top: 0;
 }
 
-.students-table tbody tr:hover {
+.courses-table tbody tr:hover {
   background: #f8f9fa;
 }
 
-.students-table tbody tr:last-child td {
+.courses-table tbody tr:last-child td {
   border-bottom: none;
 }
 
-.student-id {
+.course-id {
   font-family: monospace;
   font-weight: 500;
   color: #495057;
 }
 
-.student-name {
+.course-name {
   font-weight: 500;
   color: #2c3e50;
 }
 
-.email-link {
-  color: #007bff;
-  text-decoration: none;
-  transition: color 0.2s ease;
+.course-description {
+  color: #6c757d;
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.email-link:hover {
-  color: #0056b3;
-  text-decoration: underline;
+.course-credits {
+  font-weight: 500;
+  color: #495057;
+}
+
+.course-teacher {
+  font-weight: 500;
+  color: #2c3e50;
 }
 
 .enrollment-date {

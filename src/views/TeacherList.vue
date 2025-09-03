@@ -17,14 +17,22 @@
     
     <div v-else class="table-container">
       <TeacherTable
-        :teachers="filteredTeachers"
-        :filters="filters"
+        :teachers="teachers"
         :loading="loading"
         @edit="openEditModal"
         @delete="handleDelete"
         @view-courses="viewCourses"
-        @filter-change="handleFilterChange"
-        @clear-filters="clearFilters"
+        @search="handleSearch"
+      />
+      
+      <Pagination
+        :current-page="pagination.currentPage"
+        :total-pages="pagination.totalPages"
+        :total-count="pagination.totalCount"
+        :page-size="pagination.pageSize"
+        :loading="loading"
+        @page-change="handlePageChange"
+        @page-size-change="handlePageSizeChange"
       />
     </div>
 
@@ -52,11 +60,12 @@
 </template>
 
 <script setup>
-import { ref, onMounted, nextTick, computed } from 'vue';
+import { ref, onMounted, nextTick } from 'vue';
 import { fetchTeachers, deleteTeacher, getTeacherCourses } from '@/api/teachers.js';
 import TeacherForm from './TeacherForm.vue';
 import TeacherTable from '@/components/TeacherTable.vue';
 import TeacherCoursesModal from '@/components/TeacherCoursesModal.vue';
+import Pagination from '@/components/Pagination.vue';
 import { useConfirm } from '@/composables/useConfirm';
 import { useErrorHandler } from '@/composables/useErrorHandler';
 
@@ -71,34 +80,29 @@ const formMode = ref('create');
 const selectedTeacher = ref(null);
 const teacherFormRef = ref(null);
 
-const filters = ref({
-  teacherId: '',
-  name: '',
-  email: '',
-  age: ''
+const pagination = ref({
+  currentPage: 0,
+  totalPages: 0,
+  totalCount: 0,
+  pageSize: 20
 });
+
+const searchQuery = ref('');
 
 const { confirm } = useConfirm();
 const { handleError } = useErrorHandler();
-
-const filteredTeachers = computed(() => {
-  return teachers.value.filter(teacher => {
-    return (
-      teacher.teacherId.toString().toLowerCase().includes(filters.value.teacherId.toLowerCase()) &&
-      teacher.name.toLowerCase().includes(filters.value.name.toLowerCase()) &&
-      teacher.email.toLowerCase().includes(filters.value.email.toLowerCase()) &&
-      teacher.age.toString().includes(filters.value.age)
-    );
-  });
-});
 
 async function loadTeachers() {
   error.value = '';
   loading.value = true;
   
   try {
-    const { data } = await fetchTeachers();
-    teachers.value = data;
+    const response = await fetchTeachers(pagination.value.currentPage, pagination.value.pageSize);
+    teachers.value = response.data;
+    
+    // Extract pagination info from headers
+    pagination.value.totalPages = parseInt(response.headers['x-total-pages']) || 0;
+    pagination.value.totalCount = parseInt(response.headers['x-total-count']) || 0;
   } catch (e) {
     error.value = handleError(e, '載入教師資料失敗');
   } finally {
@@ -155,17 +159,21 @@ function handleFormClose() {
   selectedTeacher.value = null;
 }
 
-function handleFilterChange(newFilters) {
-  filters.value = { ...filters.value, ...newFilters };
+function handleSearch(query) {
+  searchQuery.value = query;
+  pagination.value.currentPage = 0; // Reset to first page when searching
+  loadTeachers();
 }
 
-function clearFilters() {
-  filters.value = {
-    teacherId: '',
-    name: '',
-    email: '',
-    age: ''
-  };
+function handlePageChange(page) {
+  pagination.value.currentPage = page;
+  loadTeachers();
+}
+
+function handlePageSizeChange(pageSize) {
+  pagination.value.pageSize = pageSize;
+  pagination.value.currentPage = 0; // Reset to first page when changing page size
+  loadTeachers();
 }
 
 async function viewCourses(teacherId) {

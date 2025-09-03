@@ -9,52 +9,31 @@
         <th>生日</th>
         <th>操作</th>
       </tr>
-      <tr class="filter-row">
-        <th>
-          <input 
-            :value="filters.studentId" 
-            @input="handleFilterInput('studentId', $event)" 
-            placeholder="篩選學號" 
-            class="filter-input" 
-          />
-        </th>
-        <th>
-          <input 
-            :value="filters.firstName" 
-            @input="handleFilterInput('firstName', $event)" 
-            placeholder="篩選名" 
-            class="filter-input" 
-          />
-        </th>
-        <th>
-          <input 
-            :value="filters.lastName" 
-            @input="handleFilterInput('lastName', $event)" 
-            placeholder="篩選姓" 
-            class="filter-input" 
-          />
-        </th>
-        <th>
-          <input 
-            :value="filters.email" 
-            @input="handleFilterInput('email', $event)" 
-            placeholder="篩選電子郵件" 
-            class="filter-input" 
-          />
-        </th>
-        <th>
-          <input 
-            :value="filters.birthday" 
-            @input="handleFilterInput('birthday', $event)" 
-            placeholder="篩選生日" 
-            class="filter-input" 
-            type="date"
-          />
-        </th>
-        <th>
-          <button @click="$emit('clear-filters')" class="clear-filters-btn">
-            清除
-          </button>
+      <tr class="search-row">
+        <th colspan="6">
+          <div class="search-container">
+            <input 
+              :value="searchQuery" 
+              @input="handleSearchInput"
+              @keyup.enter="$emit('search', searchQuery)"
+              placeholder="搜尋學生（學號、姓名、電子郵件）" 
+              class="search-input" 
+            />
+            <button 
+              @click="$emit('search', searchQuery)" 
+              class="search-btn"
+              :disabled="loading"
+            >
+              搜尋
+            </button>
+            <button 
+              @click="handleClearSearch" 
+              class="clear-search-btn"
+              :disabled="loading"
+            >
+              清除
+            </button>
+          </div>
         </th>
       </tr>
     </thead>
@@ -71,6 +50,14 @@
         <td class="date-cell">{{ formatDate(student.birthday) }}</td>
         <td class="actions-cell">
           <div class="action-buttons">
+            <button 
+              class="btn btn-sm btn-info" 
+              @click="$emit('view-courses', student.studentId)" 
+              :disabled="loading"
+              title="查看選課"
+            >
+              查看選課
+            </button>
             <button 
               class="btn btn-sm btn-outline" 
               @click="$emit('edit', student)" 
@@ -92,7 +79,7 @@
       </tr>
       <tr v-if="students.length === 0 && !loading">
         <td colspan="6" class="no-data">
-          沒有符合篩選條件的學生
+          沒有找到學生資料
         </td>
       </tr>
       <tr v-if="loading">
@@ -108,16 +95,12 @@
 </template>
 
 <script setup>
-import { defineEmits } from 'vue';
+import { ref, defineEmits } from 'vue';
 
 defineProps({
   students: {
     type: Array,
     default: () => []
-  },
-  filters: {
-    type: Object,
-    default: () => ({})
   },
   loading: {
     type: Boolean,
@@ -125,10 +108,17 @@ defineProps({
   }
 });
 
-const emit = defineEmits(['edit', 'delete', 'filter-change', 'clear-filters']);
+const emit = defineEmits(['edit', 'delete', 'view-courses', 'search']);
 
-function handleFilterInput(field, event) {
-  emit('filter-change', { [field]: event.target.value });
+const searchQuery = ref('');
+
+function handleSearchInput(event) {
+  searchQuery.value = event.target.value;
+}
+
+function handleClearSearch() {
+  searchQuery.value = '';
+  emit('search', '');
 }
 
 function formatDate(dateString) {
@@ -160,29 +150,55 @@ function formatDate(dateString) {
   border-top: 1px solid #dee2e6;
 }
 
-.filter-row th {
-  padding: 8px;
+.search-row th {
+  padding: 12px;
   background: #f1f3f4;
 }
 
-.filter-input {
-  width: 100%;
-  padding: 6px 8px;
+.search-container {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.search-input {
+  flex: 1;
+  padding: 8px 12px;
   border: 1px solid #ced4da;
   border-radius: 4px;
-  font-size: 13px;
+  font-size: 14px;
   transition: border-color 0.2s ease;
 }
 
-.filter-input:focus {
+.search-input:focus {
   outline: none;
   border-color: #007bff;
   box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
 }
 
-.clear-filters-btn {
-  padding: 6px 12px;
-  font-size: 13px;
+.search-btn {
+  padding: 8px 16px;
+  font-size: 14px;
+  background: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.search-btn:hover:not(:disabled) {
+  background: #0056b3;
+}
+
+.search-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.clear-search-btn {
+  padding: 8px 16px;
+  font-size: 14px;
   background: #6c757d;
   color: white;
   border: none;
@@ -191,8 +207,13 @@ function formatDate(dateString) {
   transition: background-color 0.2s ease;
 }
 
-.clear-filters-btn:hover {
+.clear-search-btn:hover:not(:disabled) {
   background: #5a6268;
+}
+
+.clear-search-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .student-id {
@@ -259,6 +280,17 @@ function formatDate(dateString) {
 .btn-danger:hover:not(:disabled) {
   background: #c82333;
   border-color: #bd2130;
+}
+
+.btn-info {
+  background: #17a2b8;
+  border: 1px solid #17a2b8;
+  color: white;
+}
+
+.btn-info:hover:not(:disabled) {
+  background: #138496;
+  border-color: #117a8b;
 }
 
 .no-data {

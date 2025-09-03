@@ -1,7 +1,12 @@
 import http from './http'
 
-export function fetchCourses() {
-    return http.get('/courses')
+export function fetchCourses(pageNumber, pageSize) {
+    const params = {};
+    if (pageNumber !== undefined && pageSize !== undefined) {
+        params.pageNumber = pageNumber;
+        params.pageSize = pageSize;
+    }
+    return http.get('/courses', { params });
 }
 
 export function getCourse(id) {
@@ -20,6 +25,11 @@ export function deleteCourse(id) {
     return http.delete(`/courses/${id}`)
 }
 
-export function getCourseStudents(id) {
-    return http.get(`/courses/${id}/Students`)
+export function getCourseStudents(id, pageNumber, pageSize) {
+    const params = {};
+    if (pageNumber !== undefined && pageSize !== undefined) {
+        params.pageNumber = pageNumber;
+        params.pageSize = pageSize;
+    }
+    return http.get(`/courses/${id}/Students`, { params });
 }
