@@ -13,6 +13,7 @@ import { RouterLink, RouterView } from 'vue-router'
         <RouterLink to="/teachers" exact>教師列表</RouterLink>
         <RouterLink to="/courses" exact>課程列表</RouterLink>
         <RouterLink to="/enrollment" exact>選課管理</RouterLink>
+        <RouterLink to="/statistics" exact>統計分析</RouterLink>
         <RouterLink to="/data-init" exact>資料初始化</RouterLink>
       </nav>
     </div>
