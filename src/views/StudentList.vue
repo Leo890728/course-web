@@ -111,7 +111,11 @@ async function loadStudents() {
   loading.value = true;
   
   try {
-    const response = await fetchStudents(pagination.value.currentPage, pagination.value.pageSize);
+    const response = await fetchStudents(
+      pagination.value.currentPage, 
+      pagination.value.pageSize,
+      searchQuery.value
+    );
     students.value = response.data;
     
     // Extract pagination info from headers

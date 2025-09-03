@@ -15,7 +15,8 @@
       <span>載入中...</span>
     </div>
     
-    <div v-else class="table-container">
+    
+    <div v-if="!loading" class="table-container">
       <CourseTable
         :courses="courses"
         :loading="loading"
@@ -111,7 +112,11 @@ async function loadCourses() {
   loading.value = true;
   
   try {
-    const response = await fetchCourses(pagination.value.currentPage, pagination.value.pageSize);
+    const response = await fetchCourses(
+      pagination.value.currentPage, 
+      pagination.value.pageSize,
+      searchQuery.value
+    );
     courses.value = response.data;
     
     // Extract pagination info from headers

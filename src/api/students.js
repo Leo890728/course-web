@@ -1,10 +1,13 @@
 import http from './http'
 
-export function fetchStudents(pageNumber, pageSize) {
+export function fetchStudents(pageNumber, pageSize, searchKeyword) {
     const params = {};
     if (pageNumber !== undefined && pageSize !== undefined) {
         params.pageNumber = pageNumber;
         params.pageSize = pageSize;
+    }
+    if (searchKeyword !== undefined && searchKeyword !== null && searchKeyword.trim() !== '') {
+        params.search = searchKeyword.trim();
     }
     return http.get('/students', { params });
 }

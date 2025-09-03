@@ -97,7 +97,11 @@ async function loadTeachers() {
   loading.value = true;
   
   try {
-    const response = await fetchTeachers(pagination.value.currentPage, pagination.value.pageSize);
+    const response = await fetchTeachers(
+      pagination.value.currentPage, 
+      pagination.value.pageSize,
+      searchQuery.value
+    );
     teachers.value = response.data;
     
     // Extract pagination info from headers

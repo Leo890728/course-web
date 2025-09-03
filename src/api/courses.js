@@ -1,10 +1,13 @@
 import http from './http'
 
-export function fetchCourses(pageNumber, pageSize) {
+export function fetchCourses(pageNumber, pageSize, searchKeyword) {
     const params = {};
     if (pageNumber !== undefined && pageSize !== undefined) {
         params.pageNumber = pageNumber;
         params.pageSize = pageSize;
+    }
+    if (searchKeyword !== undefined && searchKeyword !== null && searchKeyword.trim() !== '') {
+        params.search = searchKeyword.trim();
     }
     return http.get('/courses', { params });
 }
@@ -33,3 +36,4 @@ export function getCourseStudents(id, pageNumber, pageSize) {
     }
     return http.get(`/courses/${id}/Students`, { params });
 }
+
