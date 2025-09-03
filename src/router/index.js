@@ -3,6 +3,7 @@ import StudentList from "@/views/StudentList.vue";
 import TeacherList from "@/views/TeacherList.vue";
 import CourseList from "@/views/CourseList.vue";
 import EnrollmentManagement from "@/views/EnrollmentManagement.vue";
+import DataInitialization from "@/views/DataInitialization.vue";
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -12,6 +13,7 @@ const router = createRouter({
     { path: '/teachers', name: 'teachers', component: TeacherList },
     { path: '/courses', name: 'courses', component: CourseList },
     { path: '/enrollment', name: 'enrollment', component: EnrollmentManagement },
+    { path: '/data-init', name: 'data-init', component: DataInitialization },
   ],
 })
 
